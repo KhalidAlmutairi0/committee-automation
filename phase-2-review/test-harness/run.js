@@ -2,7 +2,7 @@
  * مشغّل الاختبارات خارج أبس سكربت.
  *   node phase-2-review/test-harness/run.js
  *
- * يشغّل سبع مجموعات على نفس كود الإنتاج بدون تعديل:
+ * يشغّل ثماني مجموعات على نفس كود الإنتاج بدون تعديل:
  *   1. فحوصات الخط الزمني  — دوال خالصة، بلا شيت ولا بريد
  *   2. تكامل المرحلة ٢أ     — بخدمات أبس سكربت محاكاة
  *   3. توافق المرحلة ١      — يثبت أن ترقيع classifier.gs ما كسر التصنيف
@@ -10,6 +10,7 @@
  *   5. تقييم الروبريك       — نداء المودل والتحقق والحواجز
  *   6. مراجعة القائد        — تعديل الدرجات والإرسال مرة واحدة
  *   7. دورة حياة فورم ٢أ    — الاستبدال الآمن والتريقرات والردود المعلّقة
+ *   8. منطق معايرة ٢ب       — المقارنة والتقرير بلا نداء API حقيقي
  *
  * نفس اختبارات المجموعة الأولى تنشغل داخل أبس سكربت من
  * القائمة > المرحلة ٢ > تشغيل اختبارات الفحوصات.
@@ -25,7 +26,7 @@ const read2 = f => fs.readFileSync(path.join(P2, f), 'utf8');
 
 const CORE = ['config.gs', 'hijri.gs', 'projects.gs', 'log.gs',
               'timeline_checks.gs', 'timeline_store.gs', 'timeline_decision.gs',
-              'proposals.gs', 'rubric.gs', 'figures.gs', 'scoring.gs', 'review.gs',
+              'proposals.gs', 'rubric.gs', 'figures.gs', 'scoring.gs', 'calibration.gs', 'review.gs',
               'setup.gs'];
 
 function suiteTimeline() {
@@ -71,6 +72,7 @@ const ok = [
   child('cases-scoring.js', false),
   child('cases-lead-review.js', false),
   child('cases-form-lifecycle.js', false),
+  child('cases-calibration.js', false),
   realProjects()
 ];
 

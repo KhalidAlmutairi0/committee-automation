@@ -167,6 +167,43 @@ function callAnthropic_(payload) {
   throw new Error('فشل نداء Anthropic بعد المحاولات. ' + lastError);
 }
 
+function scoringRequestPayload_(proposalName, proposalSize, text, figures) {
+  return {
+    model: CONFIG_2.ANTHROPIC_MODEL,
+    max_tokens: 16000,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: CONFIG_2.SCORING_EFFORT },
+    fallbacks: 'default',
+    system: buildScoringSystemPrompt(figures),
+    tools: [scoringToolSchema_()],
+    tool_choice: { type: 'tool', name: 'submit_rubric_scores' },
+    messages: [{
+      role: 'user',
+      content: 'قيّم هذا البربوزل على الروبريك.\n\n' +
+               'اسم المشروع: ' + proposalName + '\n' +
+               'الحجم المعتمد: ' + proposalSize + '\n\n' +
+               '=== نص البربوزل ===\n' + text
+    }]
+  };
+}
+
+function scoringItemsFromResponse_(response, text, figures) {
+  if (response.stop_reason === 'refusal') {
+    throw new Error('المودل امتنع عن الرد على هذا البربوزل. ' +
+      'راجعه يدوياً. ' + JSON.stringify(response.stop_details || {}));
+  }
+
+  const toolUse = (response.content || []).filter(function (block) {
+    return block.type === 'tool_use' && block.name === 'submit_rubric_scores';
+  })[0];
+
+  if (!toolUse) {
+    throw new Error('المودل ما أرسل الدرجات عبر الأداة. stop_reason: ' +
+                    response.stop_reason);
+  }
+  return validateScoring(toolUse.input.criteria, text, figures);
+}
+
 // ============================================================
 // التحقق — هنا الكود يحكم على مخرج المودل
 // ============================================================
@@ -336,39 +373,9 @@ function scoreProposal(projectId) {
   const warning = figuresWarning(figures);
   if (warning) Logger.log('⚠️ ' + warning);
 
-  const response = callAnthropic_({
-    model: CONFIG_2.ANTHROPIC_MODEL,
-    max_tokens: 16000,
-    thinking: { type: 'adaptive' },
-    output_config: { effort: CONFIG_2.SCORING_EFFORT },
-    fallbacks: 'default',
-    system: buildScoringSystemPrompt(figures),
-    tools: [scoringToolSchema_()],
-    tool_choice: { type: 'tool', name: 'submit_rubric_scores' },
-    messages: [{
-      role: 'user',
-      content: 'قيّم هذا البربوزل على الروبريك.\n\n' +
-               'اسم المشروع: ' + proposal.name + '\n' +
-               'الحجم المعتمد: ' + proposal.size + '\n\n' +
-               '=== نص البربوزل ===\n' + text
-    }]
-  });
-
-  if (response.stop_reason === 'refusal') {
-    throw new Error('المودل امتنع عن الرد على هذا البربوزل. ' +
-      'راجعه يدوياً. ' + JSON.stringify(response.stop_details || {}));
-  }
-
-  const toolUse = (response.content || []).filter(function (b) {
-    return b.type === 'tool_use' && b.name === 'submit_rubric_scores';
-  })[0];
-
-  if (!toolUse) {
-    throw new Error('المودل ما أرسل الدرجات عبر الأداة. stop_reason: ' +
-                    response.stop_reason);
-  }
-
-  const items    = validateScoring(toolUse.input.criteria, text, figures);
+  const response = callAnthropic_(
+    scoringRequestPayload_(proposal.name, proposal.size, text, figures));
+  const items    = scoringItemsFromResponse_(response, text, figures);
   const outcome  = computeRubricDecision(items);
 
   // إعادة التقييم محاولة مراجعة مستقلة. إبقاء نفس المعرّف كان يضيف ثمانية
