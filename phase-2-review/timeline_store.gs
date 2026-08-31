@@ -37,7 +37,9 @@ function planFields_() {
     { key: 'leadReason', label: 'سبب قرار القائد'  },
     { key: 'gate',       label: 'حالة الرفع'       },
     { key: 'token',      label: 'رمز الرفع'        },
-    { key: 'detail',     label: 'تفصيل الفحوصات'   }
+    { key: 'detail',     label: 'تفصيل الفحوصات'   },
+    // عمود جديد في النهاية حتى تبقى فهارس الشيتات المركّبة سابقاً كما هي.
+    { key: 'prepActivities', label: 'الأنشطة التمهيدية (JSON)' }
   );
   return f;
 }
@@ -63,6 +65,71 @@ function planWidth_() { return planFields_().length; }
 
 const GATE = { LOCKED: 'مقفل', UNLOCKED: 'مفتوح' };
 
+/**
+ * القائمة الجديدة غير محددة بعدد خانات الفورم: نشاط واحد في كل سطر.
+ * الصيغة: العنوان | YYYY-MM-DD | نعم أو لا
+ */
+function parsePrepActivities_(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return [];
+
+  return text.split(/\r?\n/)
+    .map(function (line, index) { return { text: line.trim(), number: index + 1 }; })
+    .filter(function (line) { return line.text !== ''; })
+    .map(function (line) {
+      const parts = line.text.split('|').map(function (part) { return part.trim(); });
+      const lineNumber = line.number;
+      if (parts.length < 2 || parts.length > 3 || !parts[0]) {
+        throw new Error('صيغة النشاط التمهيدي في السطر ' + lineNumber +
+          ' غير صحيحة. استخدم: العنوان | YYYY-MM-DD | نعم أو لا');
+      }
+
+      const iso = parts[1];
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        throw new Error('تاريخ النشاط التمهيدي في السطر ' + lineNumber +
+          ' لازم يكون بصيغة YYYY-MM-DD.');
+      }
+      const date = toDay_(iso);
+      if (!date || fmtDate(date) !== iso) {
+        throw new Error('تاريخ النشاط التمهيدي في السطر ' + lineNumber + ' غير صالح: ' + iso);
+      }
+
+      const flag = parts.length === 3 ? parts[2] : 'لا';
+      if (flag !== 'نعم' && flag !== 'لا') {
+        throw new Error('خانة «مفتوح للجميع» في السطر ' + lineNumber +
+          ' لازم تكون «نعم» أو «لا».');
+      }
+      return { title: parts[0], date: date, openToAll: flag === 'نعم' };
+    });
+}
+
+function prepActivitiesJson_(activities) {
+  return JSON.stringify((activities || []).map(function (activity) {
+    return {
+      title: String(activity.title || '').trim(),
+      date: activity.date ? fmtDate(activity.date) : '',
+      openToAll: activity.openToAll === true
+    };
+  }));
+}
+
+function prepActivitiesFromJson_(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(String(raw));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(function (activity) {
+      return {
+        title: String(activity.title || '').trim(),
+        date: toDay_(activity.date),
+        openToAll: activity.openToAll === true
+      };
+    });
+  } catch (err) {
+    return [];
+  }
+}
+
 /** يقرأ رد فورم الخطة الزمنية ويرجّع كائن خطة غير مفحوص */
 function parseTimelineResponse(e) {
   const answers = {};
@@ -80,14 +147,17 @@ function parseTimelineResponse(e) {
     hijri[k] = String(answers[F.hijri[k]] || '').trim();
   });
 
-  const prepActivities = [];
-  for (let i = 1; i <= CONFIG_2.PREP_ACTIVITY_SLOTS; i++) {
-    const slot = function (tpl) { return tpl.replace('{n}', String(i)); };
-    const title = String(answers[slot(F.prep.title)] || '').trim();
-    const date  = toDay_(answers[slot(F.prep.date)]);
-    const open  = String(answers[slot(F.prep.openToAll)] || '').trim();
-    if (!title && !date) continue;
-    prepActivities.push({ title: title, date: date, openToAll: open === 'نعم' });
+  let prepActivities = parsePrepActivities_(answers[F.prepActivities]);
+  // توافق مؤقت مع الفورم القديم ذي الخانات الثلاث.
+  if (!prepActivities.length) {
+    for (let i = 1; i <= CONFIG_2.PREP_ACTIVITY_SLOTS; i++) {
+      const slot = function (tpl) { return tpl.replace('{n}', String(i)); };
+      const title = String(answers[slot(F.prep.title)] || '').trim();
+      const date  = toDay_(answers[slot(F.prep.date)]);
+      const open  = String(answers[slot(F.prep.openToAll)] || '').trim();
+      if (!title && !date) continue;
+      prepActivities.push({ title: title, date: date, openToAll: open === 'نعم' });
+    }
   }
 
   return {
@@ -151,6 +221,7 @@ function savePlan(plan, project, result) {
   put('detail',     result.checks.map(function (c) {
     return c.code + '=' + RESULT_LABEL[c.result];
   }).join(' | '));
+  put('prepActivities', prepActivitiesJson_(plan.prepActivities));
 
   sheet.appendRow(row);
   return { reviewId: reviewId, token: token };
@@ -187,6 +258,7 @@ function planRowToObject_(r, rowNumber) {
     leadReason: String(get('leadReason')|| ''),
     gate:       String(get('gate')      || ''),
     token:      String(get('token')     || ''),
+    prepActivities: prepActivitiesFromJson_(get('prepActivities')),
     eventStart: toDay_(get('date:eventStart')),
     eventEnd:   toDay_(get('date:eventEnd'))
   };

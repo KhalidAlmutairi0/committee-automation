@@ -69,15 +69,13 @@ function createTimelineForm() {
                    'نشاط قبل إعلان المقبولين يعني تدريب ناس ما نعرف إن كانوا مقبولين، ' +
                    'إلا إذا كان مفتوحاً للجميع.');
 
-  for (let i = 1; i <= CONFIG_2.PREP_ACTIVITY_SLOTS; i++) {
-    const slot = function (tpl) { return tpl.replace('{n}', String(i)); };
-    form.addTextItem().setTitle(slot(F.prep.title)).setRequired(false);
-    form.addDateItem().setTitle(slot(F.prep.date)).setRequired(false);
-    form.addMultipleChoiceItem()
-        .setTitle(slot(F.prep.openToAll))
-        .setChoiceValues(['نعم', 'لا'])
-        .setRequired(false);
-  }
+  form.addParagraphTextItem()
+      .setTitle(F.prepActivities)
+      .setHelpText('اكتبوا أي عدد من الأنشطة، نشاطاً واحداً في كل سطر، هكذا: ' +
+                   'العنوان | YYYY-MM-DD | نعم أو لا. ' +
+                   '«نعم» تعني مفتوح للجميع بدون قبول. مثال: ' +
+                   'جلسة تعريفية | 2026-07-31 | نعم')
+      .setRequired(false);
 
   form.addParagraphTextItem().setTitle(F.notes).setRequired(false);
 

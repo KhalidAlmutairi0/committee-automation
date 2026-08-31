@@ -14,12 +14,13 @@ addProject('FTC-26-003','مشروع بلا حجم','ورشة عمل','','team3@k
 
 // --- بناء رد فورم مزيف ---
 const D=iso=>{const p=iso.split('-');return new Date(+p[0],+p[1]-1,+p[2]);};
-function formEvent(projectId,email,dates,hijri){
+function formEvent(projectId,email,dates,hijri,prepActivities){
   const F2=CONFIG_2.FORM_2A;const items=[];
   const push=(t,v)=>items.push({getItem:()=>({getTitle:()=>t}),getResponse:()=>v});
   push(F2.projectId,projectId);
   CONFIG_2.MILESTONES.forEach(m=>push(F2.dates[m.key],dates[m.key]||''));
   CONFIG_2.HIJRI_FIELDS.forEach(k=>push(F2.hijri[k],(hijri||{})[k]||''));
+  push(F2.prepActivities||'الأنشطة التمهيدية المتكررة',prepActivities||'');
   push(F2.notes,'');
   return {response:{getItemResponses:()=>items,getRespondentEmail:()=>email}};
 }
@@ -72,6 +73,25 @@ T('تاريخ معكوس: البوابة تقفل وما فيه رمز',()=>{
   const team=mailsTo('team2@ksu.example');
   if(team[0].htmlBody.indexOf('مقفل')===-1)return 'ما بلّغ الفريق بالقفل';
   return true;
+});
+
+T('النشاط التمهيدي الرابع يُحفظ ويمر على T7 بلا سقف ثابت',()=>{
+  clearMails();
+  addProject('FTC-26-007','معسكر الأنظمة','معسكر تدريبي','متوسط','team7@ksu.example');
+  const activities=[
+    'جلسة 1 | 2026-11-11 | لا',
+    'جلسة 2 | 2026-11-12 | لا',
+    '',
+    'جلسة 3 | 2026-11-13 | لا',
+    'ورشة قبل القبول | 2026-10-12 | لا'
+  ].join('\n');
+  onTimelineSubmit(formEvent('FTC-26-007','team7@ksu.example',GOOD,{},activities));
+  const plan=latestPlanFor('FTC-26-007');
+  if(!plan)return 'الخطة ما انحفظت';
+  if(plan.computed!=='إعادة تقديم')return 'النشاط الرابع ما وصل T7: '+plan.computed;
+  const stored=timelinePlansSheet().getRange(plan.rowNumber,planCol('prepActivities')).getValue();
+  const parsed=JSON.parse(stored);
+  return parsed.length===4?true:'المحفوظ من الأنشطة: '+parsed.length;
 });
 
 T('البوابة ترفض رفع بربوزل لمشروع مرفوض',()=>{
