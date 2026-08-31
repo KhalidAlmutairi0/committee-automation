@@ -39,7 +39,8 @@ function planFields_() {
     { key: 'token',      label: 'رمز الرفع'        },
     { key: 'detail',     label: 'تفصيل الفحوصات'   },
     // عمود جديد في النهاية حتى تبقى فهارس الشيتات المركّبة سابقاً كما هي.
-    { key: 'prepActivities', label: 'الأنشطة التمهيدية (JSON)' }
+    { key: 'prepActivities', label: 'الأنشطة التمهيدية (JSON)' },
+    { key: 'responseId', label: 'معرّف رد فورم ٢أ' }
   );
   return f;
 }
@@ -162,6 +163,7 @@ function parseTimelineResponse(e) {
 
   return {
     prepActivities: prepActivities,
+    responseId: e.response.getId ? String(e.response.getId() || '') : '',
     projectId: String(answers[F.projectId] || '').trim().toUpperCase(),
     email:     e.response.getRespondentEmail(),
     notes:     String(answers[F.notes] || '').trim(),
@@ -222,6 +224,7 @@ function savePlan(plan, project, result) {
     return c.code + '=' + RESULT_LABEL[c.result];
   }).join(' | '));
   put('prepActivities', prepActivitiesJson_(plan.prepActivities));
+  put('responseId', plan.responseId || '');
 
   sheet.appendRow(row);
   return { reviewId: reviewId, token: token };
@@ -259,6 +262,7 @@ function planRowToObject_(r, rowNumber) {
     gate:       String(get('gate')      || ''),
     token:      String(get('token')     || ''),
     prepActivities: prepActivitiesFromJson_(get('prepActivities')),
+    responseId: String(get('responseId') || ''),
     eventStart: toDay_(get('date:eventStart')),
     eventEnd:   toDay_(get('date:eventEnd'))
   };

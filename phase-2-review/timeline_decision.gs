@@ -13,6 +13,8 @@
 const TIMELINE_DECISIONS = ['معتمد', 'معتمد بتنبيهات', 'إعادة تقديم'];
 
 function onTimelineSubmit(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
   try {
     const plan    = parseTimelineResponse(e);
     const project = getProject(plan.projectId);
@@ -62,6 +64,8 @@ function onTimelineSubmit(e) {
       subject: '[خطأ] فحوصات الخط الزمني',
       body: err.message + '\n\n' + err.stack
     });
+  } finally {
+    lock.releaseLock();
   }
 }
 

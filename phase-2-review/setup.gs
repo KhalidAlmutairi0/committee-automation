@@ -8,7 +8,148 @@
  *   4. من القائمة: "فحص الإعدادات" ثم "إنشاء فورم الخطة الزمنية"
  */
 
+const TIMELINE_FORMS_PROPERTY_ = 'TIMELINE_2A_FORMS';
+
+function timelineFormRecords_() {
+  const raw = PropertiesService.getScriptProperties().getProperty(TIMELINE_FORMS_PROPERTY_);
+  if (!raw) return [];
+  try {
+    const records = JSON.parse(raw);
+    return Array.isArray(records) ? records : [];
+  } catch (err) {
+    throw new Error('سجل فورمات ٢أ في Script Properties تالف: ' + err.message);
+  }
+}
+
+function rememberTimelineForms_(forms) {
+  const byId = {};
+  timelineFormRecords_().forEach(function (record) {
+    if (record && record.id) byId[record.id] = record;
+  });
+  forms.forEach(function (form) {
+    byId[form.getId()] = { id: form.getId(), url: form.getPublishedUrl() };
+  });
+  PropertiesService.getScriptProperties().setProperty(
+    TIMELINE_FORMS_PROPERTY_, JSON.stringify(Object.keys(byId).map(function (id) { return byId[id]; })));
+}
+
+function knownTimelineForms_() {
+  const forms = [], seen = {};
+  const add = function (form) {
+    const id = form.getId();
+    if (!seen[id]) { seen[id] = true; forms.push(form); }
+  };
+
+  timelineFormRecords_().forEach(function (record) {
+    try { add(FormApp.openById(record.id)); }
+    catch (err) { throw new Error('ما قدرنا نفتح فورم ٢أ المسجّل ' + record.id + ': ' + err.message); }
+  });
+
+  // يلتقط الفورمات المنشأة قبل إضافة السجل حتى لو لم يُحدّث CONFIG_2 بعد.
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() !== 'onTimelineSubmit' || !trigger.getTriggerSourceId) return;
+    const id = trigger.getTriggerSourceId();
+    if (!id) return;
+    try { add(FormApp.openById(id)); }
+    catch (err) { throw new Error('ما قدرنا نفتح فورم ٢أ المرتبط بالتريقر ' + id + ': ' + err.message); }
+  });
+
+  if (CONFIG_2.TIMELINE_FORM_URL) {
+    try { add(FormApp.openByUrl(CONFIG_2.TIMELINE_FORM_URL)); }
+    catch (err) {
+      throw new Error('ما قدرنا نفتح CONFIG_2.TIMELINE_FORM_URL: ' + err.message);
+    }
+  }
+  return forms;
+}
+
+function timelineSubmitTriggers_() {
+  return ScriptApp.getProjectTriggers().filter(function (trigger) {
+    return trigger.getHandlerFunction() === 'onTimelineSubmit';
+  });
+}
+
+function timelineFormHasTrigger_(form, triggers) {
+  const id = form.getId();
+  return triggers.some(function (trigger) {
+    return trigger.getTriggerSourceId && trigger.getTriggerSourceId() === id;
+  });
+}
+
+function responseProjectId_(response) {
+  let projectId = '';
+  response.getItemResponses().forEach(function (item) {
+    if (item.getItem().getTitle().trim() === CONFIG_2.FORM_2A.projectId) {
+      projectId = String(item.getResponse() || '').trim().toUpperCase();
+    }
+  });
+  return projectId;
+}
+
+/** ردود الفورم التي لا يقابلها صف خطة، مع توافق للصفوف القديمة بلا responseId. */
+function unprocessedTimelineResponses_(form) {
+  const sheet = timelinePlansSheet();
+  const rows = sheet.getLastRow() < 2 ? [] :
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, planWidth_()).getValues();
+  const usedRows = {};
+  const responses = form.getResponses();
+  const unmatched = [];
+
+  responses.forEach(function (response) {
+    const responseId = response.getId ? String(response.getId() || '') : '';
+    const exact = rows.findIndex(function (row, index) {
+      return !usedRows[index] && responseId &&
+        String(row[planCol('responseId') - 1] || '') === responseId;
+    });
+    if (exact !== -1) { usedRows[exact] = true; return; }
+
+    // صفوف ما قبل إضافة responseId: نطابقها مرة واحدة بالمعرّف والإيميل.
+    const projectId = responseProjectId_(response);
+    const email = response.getRespondentEmail ? String(response.getRespondentEmail() || '').trim() : '';
+    const legacy = rows.findIndex(function (row, index) {
+      if (usedRows[index] || row[planCol('responseId') - 1]) return false;
+      if (String(row[planCol('projectId') - 1] || '').trim().toUpperCase() !== projectId) return false;
+      const rowEmail = String(row[planCol('email') - 1] || '').trim();
+      return !email || !rowEmail || rowEmail === email;
+    });
+    if (legacy !== -1) { usedRows[legacy] = true; return; }
+
+    const timestamp = response.getTimestamp ? response.getTimestamp() : '';
+    unmatched.push({ id: responseId || '(بلا معرّف)', projectId: projectId || '(بلا مشروع)',
+                     email: email || '(بلا إيميل)', timestamp: timestamp });
+  });
+  return unmatched;
+}
+
+function assertTimelineFormsHealthy_() {
+  const forms = knownTimelineForms_();
+  const triggers = timelineSubmitTriggers_();
+  const healthyUrl = forms.filter(function (form) {
+    return form.isAcceptingResponses() && timelineFormHasTrigger_(form, triggers);
+  }).map(function (form) { return form.getPublishedUrl(); })[0] || '';
+  const orphaned = forms.filter(function (form) {
+    return form.isAcceptingResponses() && !timelineFormHasTrigger_(form, triggers);
+  });
+  if (!orphaned.length) return true;
+
+  orphaned.forEach(function (form) {
+    form.setCustomClosedFormMessage(
+      healthyUrl ? 'هذا النموذج مغلق. استخدم نموذج الخطة الزمنية الجديد: ' + healthyUrl
+                 : 'هذا النموذج مغلق لأن ربط الإرسال غير مفعّل. تواصل مع لجنة إدارة المشاريع.');
+    form.setAcceptingResponses(false);
+  });
+  const message = 'خطر: أُغلق فورم ٢أ كان يقبل الردود بلا تريقر إرسال:\n' +
+    orphaned.map(function (form) { return '• ' + form.getPublishedUrl(); }).join('\n');
+  Logger.log(message);
+  try {
+    SpreadsheetApp.getUi().alert('خطأ حرج في فورم المرحلة ٢أ', message,
+                                 SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (ignored) {}
+  throw new Error(message);
+}
+
 function onOpen() {
+  assertTimelineFormsHealthy_();
   SpreadsheetApp.getUi()
     .createMenu('المرحلة ٢')
     .addItem('فحص الإعدادات',              'checkConfig')
@@ -29,11 +170,12 @@ function onOpen() {
  * السبب: نص السؤال لازم يطابق الإعدادات حرفياً، والتوليد يمنع
  * أشهر خطأ تركيب — حرف زايد في عنوان سؤال.
  */
-function createTimelineForm() {
-  const ui = SpreadsheetApp.getUi();
+function buildTimelineForm_() {
   const F  = CONFIG_2.FORM_2A;
 
   const form = FormApp.create('الخطة الزمنية — ' + CONFIG_2.COMMITTEE_NAME);
+  // يبقى مقفلاً حتى يثبت التريقر؛ أي فشل أثناء البناء لا يترك فورماً صامتاً.
+  form.setAcceptingResponses(false);
   form.setDescription(
     'ارفعوا تواريخ المشروع فقط. البربوزل يجي بعد اعتماد الخطة.\n' +
     'معرّف المشروع وصلكم في إيميل استلام المشروع.');
@@ -82,19 +224,83 @@ function createTimelineForm() {
   form.setDestination(FormApp.DestinationType.SPREADSHEET,
                       SpreadsheetApp.getActiveSpreadsheet().getId());
 
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'onTimelineSubmit') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('onTimelineSubmit').forForm(form).onFormSubmit().create();
+  return form;
+}
 
-  installLeadDecisionValidation();
-  installLeadEditTrigger();
+function createTimelineForm() {
+  const ui = SpreadsheetApp.getUi();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  let form = null;
+  const closedOld = [];
+  let handoffComplete = false;
+  try {
+    assertTimelineFormsHealthy_();
+    const oldForms = knownTimelineForms_().filter(function (old) {
+      return old.isAcceptingResponses();
+    });
+    const pending = [];
+    oldForms.forEach(function (old) {
+      unprocessedTimelineResponses_(old).forEach(function (response) {
+        pending.push(response);
+      });
+    });
+    if (pending.length) {
+      throw new Error('رفضنا استبدال فورم ٢أ: فيه ردود ما لها صف خطة:\n' +
+        pending.map(function (response) {
+          return '• ' + response.projectId + ' — ' + response.email +
+                 ' — ' + response.timestamp + ' — responseId=' + response.id;
+        }).join('\n'));
+    }
 
-  ui.alert(
-    'تم إنشاء الفورم.\n\n' +
-    'رابط التعبئة:\n' + form.getPublishedUrl() + '\n\n' +
+    form = buildTimelineForm_();
+    ScriptApp.newTrigger('onTimelineSubmit').forForm(form).onFormSubmit().create();
+    if (!timelineFormHasTrigger_(form, timelineSubmitTriggers_())) {
+      throw new Error('تعذر تثبيت تريقر الإرسال على فورم ٢أ الجديد. بقي الفورم مقفلاً.');
+    }
+
+    installLeadDecisionValidation();
+    installLeadEditTrigger();
+    rememberTimelineForms_(oldForms.concat([form]));
+
+    const newUrl = form.getPublishedUrl();
+    form.setAcceptingResponses(true);
+    oldForms.forEach(function (old) {
+      old.setCustomClosedFormMessage(
+        'هذا النموذج أُغلق بعد تحديثه. استخدم نموذج الخطة الزمنية الجديد: ' + newUrl);
+      old.setAcceptingResponses(false);
+      closedOld.push(old);
+    });
+
+    const oldIds = {};
+    oldForms.forEach(function (old) { oldIds[old.getId()] = true; });
+    timelineSubmitTriggers_().forEach(function (trigger) {
+      if (trigger.getTriggerSourceId && oldIds[trigger.getTriggerSourceId()]) {
+        try { ScriptApp.deleteTrigger(trigger); }
+        catch (err) { Logger.log('تعذر حذف تريقر فورم مغلق ' + trigger.getTriggerSourceId() + ': ' + err.message); }
+      }
+    });
+    handoffComplete = true;
+
+    ui.alert(
+    'تم إنشاء فورم جديد وإغلاق الفورم القديم.\n\n' +
+    'رابط التعبئة الجديد:\n' + newUrl + '\n\n' +
     'رابط التحرير:\n' + form.getEditUrl() + '\n\n' +
-    'انسخ رابط التعبئة وحطه في CONFIG_2.TIMELINE_FORM_URL.');
+    'حدّث CONFIG_2.TIMELINE_FORM_URL يدوياً، وحدّث الرابط الموزع على الفرق. ' +
+    'الرسائل الموجودة مسبقاً في صناديق البريد لا يمكن للنظام تعديلها.');
+  } catch (err) {
+    if (form && !handoffComplete) {
+      form.setCustomClosedFormMessage('هذا النموذج غير مفعّل بسبب خطأ في التهيئة.');
+      form.setAcceptingResponses(false);
+    }
+    // لو فشل الانتقال بعد إغلاق القديم، نرجعه مع تريقره الذي لم يُحذف بعد.
+    if (!handoffComplete) {
+      closedOld.forEach(function (old) { old.setAcceptingResponses(true); });
+    }
+    throw err;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**

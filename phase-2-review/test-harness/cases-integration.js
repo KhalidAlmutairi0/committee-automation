@@ -22,7 +22,8 @@ function formEvent(projectId,email,dates,hijri,prepActivities){
   CONFIG_2.HIJRI_FIELDS.forEach(k=>push(F2.hijri[k],(hijri||{})[k]||''));
   push(F2.prepActivities||'الأنشطة التمهيدية المتكررة',prepActivities||'');
   push(F2.notes,'');
-  return {response:{getItemResponses:()=>items,getRespondentEmail:()=>email}};
+  return {response:{getItemResponses:()=>items,getRespondentEmail:()=>email,
+    getId:()=>('response-'+projectId),getTimestamp:()=>new Date()}};
 }
 const GOOD={ideaApproval:D('2026-09-01'),sponsorClose:D('2026-09-20'),
   designsDelivery:D('2026-10-05'),regOpen:D('2026-10-15'),regClose:D('2026-11-05'),
@@ -91,7 +92,22 @@ T('النشاط التمهيدي الرابع يُحفظ ويمر على T7 بل
   if(plan.computed!=='إعادة تقديم')return 'النشاط الرابع ما وصل T7: '+plan.computed;
   const stored=timelinePlansSheet().getRange(plan.rowNumber,planCol('prepActivities')).getValue();
   const parsed=JSON.parse(stored);
-  return parsed.length===4?true:'المحفوظ من الأنشطة: '+parsed.length;
+  if(parsed.length!==4)return 'المحفوظ من الأنشطة: '+parsed.length;
+  return timelinePlansSheet().getRange(plan.rowNumber,planCol('responseId')).getValue()==='response-FTC-26-007'
+    ?true:'معرّف رد الفورم ما انحفظ';
+});
+
+T('استثناء مفتوح للجميع يعمل من نص الفورم حتى T7',()=>{
+  clearMails();
+  addProject('FTC-26-008','معسكر البيانات','معسكر تدريبي','متوسط','team8@ksu.example');
+  const activities='جلسة عامة | 2026-10-12 | نعم';
+  onTimelineSubmit(formEvent('FTC-26-008','team8@ksu.example',GOOD,{},activities));
+  const plan=latestPlanFor('FTC-26-008');
+  if(!plan)return 'الخطة ما انحفظت';
+  if(plan.computed==='إعادة تقديم')return 'المحلل ضيّع استثناء مفتوح للجميع';
+  const stored=JSON.parse(timelinePlansSheet()
+    .getRange(plan.rowNumber,planCol('prepActivities')).getValue());
+  return stored.length===1&&stored[0].openToAll===true?true:'الاستثناء ما انحفظ كقيمة منطقية';
 });
 
 T('البوابة ترفض رفع بربوزل لمشروع مرفوض',()=>{

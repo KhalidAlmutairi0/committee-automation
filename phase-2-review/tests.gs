@@ -390,6 +390,25 @@ function runTimelineTests() {
     return t7.result === 'pass' ? true : 'T7 = ' + t7.result + ' — ' + t7.detail;
   });
 
+  T('T7 يسمح بنشاط بعد إعلان المقبولين', function () {
+    const p = clone_(basePlan_());
+    p.selectiveAdmission = true;
+    p.dates.acceptanceAnnounce = d_('2026-11-10');
+    p.prepActivities = [{ title: 'تدريب المقبولين', date: d_('2026-11-11'), openToAll: false }];
+    const t7 = checkByCode_(runTimelineChecks(p, []), 'T7');
+    return t7.result === 'pass' ? true : 'T7 = ' + t7.result + ' — ' + t7.detail;
+  });
+
+  T('T7 بلا أنشطة تمهيدية ما يغيّر النتيجة', function () {
+    const p = clone_(basePlan_());
+    p.selectiveAdmission = true;
+    p.dates.acceptanceAnnounce = d_('2026-11-10');
+    p.prepActivities = [];
+    const t7 = checkByCode_(runTimelineChecks(p, []), 'T7');
+    if (t7.result !== 'pass') return 'T7 = ' + t7.result;
+    return t7.detail.indexOf('ما فيه أنشطة') !== -1 ? true : 'تفصيل الصفر غير واضح';
+  });
+
   T('T7 يعدّي مشروعاً بلا قبول انتقائي', function () {
     const p = clone_(basePlan_());
     p.dates.acceptanceAnnounce = null;
