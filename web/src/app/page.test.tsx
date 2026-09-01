@@ -5,8 +5,8 @@ import Home from "./page";
 describe("product entry screen", () => {
   it("offers separate team and committee workspaces", () => {
     render(<Home />);
-    expect(screen.getByRole("heading", { name: /إدارة المشاريع بوضوح/ })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /^دخول بوابة الفريق$/ })[0]).toHaveAttribute("href", "/team");
-    expect(screen.getAllByRole("link", { name: /^دخول مساحة اللجنة$/ })[0]).toHaveAttribute("href", "/committee");
+    expect(screen.getByRole("heading", { name: /إدارة المشاريع بوضوح/ })).not.toBeNull();
+    expect(screen.getAllByRole("link", { name: /^دخول بوابة الفريق$/ })[0].getAttribute("href")).toBe("/team");
+    expect(screen.getAllByRole("link", { name: /^دخول مساحة اللجنة$/ })[0].getAttribute("href")).toBe("/committee");
   });
 });

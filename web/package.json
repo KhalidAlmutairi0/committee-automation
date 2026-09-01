@@ -26,7 +26,6 @@
     "zod": "latest"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@types/node": "latest",
     "@types/nodemailer": "latest",
