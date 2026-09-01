@@ -1,1 +1,5 @@
 .worktrees/
+web/node_modules/
+web/.next/
+web/.env*
+!web/.env.example
