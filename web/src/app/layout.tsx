@@ -4,7 +4,6 @@ import "@fontsource/ibm-plex-sans-arabic/500.css";
 import "@fontsource/ibm-plex-sans-arabic/600.css";
 import "@fontsource/ibm-plex-sans-arabic/700.css";
 import "./globals.css";
-import { PreviewStateProvider } from "@/components/preview-state";
 
 export const metadata: Metadata = {
   title: "مسار | إدارة المشاريع",
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body><PreviewStateProvider>{children}</PreviewStateProvider></body>
+      <body>{children}</body>
     </html>
   );
 }

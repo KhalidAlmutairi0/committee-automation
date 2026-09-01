@@ -7,20 +7,30 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "db:setup": "npm run db:migrate && npm run db:bootstrap",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "bcryptjs": "latest",
     "lucide-react": "latest",
     "next": "16.3.4",
+    "nodemailer": "latest",
+    "pg": "latest",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "latest",
+    "zod": "latest"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@types/node": "latest",
+    "@types/nodemailer": "latest",
+    "@types/pg": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "jsdom": "27.0.1",

@@ -8,8 +8,8 @@ export default function Home() {
       <header className="site-header container">
         <Brand />
         <div className="header-actions">
-          <span className="preview-pill">نسخة استعراضية</span>
-          <Link className="button button-secondary" href="/committee">مساحة اللجنة</Link>
+          <span className="preview-pill">نسخة تشغيلية</span>
+          <Link className="button button-secondary" href="/login">تسجيل الدخول</Link>
         </div>
       </header>
       <main>
@@ -30,7 +30,7 @@ export default function Home() {
                 ["01", "الاستلام والتصنيف", "قرار حجم موثّق", false],
                 ["02", "فحص الخطة الزمنية", "T1 — T7", false],
                 ["03", "مقترح الرعاية", "بعد اعتماد الخطة", false],
-                ["04", "مراجعة اللجنة", "المحرك غير متصل", true]
+                ["04", "مراجعة اللجنة", "مراجعة يدوية آمنة", true]
               ].map(([number, title, text, waiting]) => (
                 <div className="pipeline-step" key={String(number)}>
                   <span className="step-number">{number}</span>
@@ -62,7 +62,7 @@ export default function Home() {
         </section>
       </main>
       <footer className="container" style={{ padding: "28px 0 40px", color: "var(--muted)", fontSize: 12, display: "flex", justifyContent: "space-between" }}>
-        <span>مسار · نسخة المنتج الأولية</span><span><Sparkles size={13} style={{ verticalAlign: "middle" }} /> بدون محرك تقييم</span>
+        <span>مسار · منصة إدارة المشاريع</span><span><Sparkles size={13} style={{ verticalAlign: "middle" }} /> التقييم اليدوي متاح</span>
       </footer>
     </>
   );

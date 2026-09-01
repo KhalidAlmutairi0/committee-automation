@@ -4,14 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Brand } from "./brand";
 import { ClipboardCheck, FileText, Gauge, House, LockKeyhole, LogOut, Settings, Users } from "lucide-react";
-import { usePreviewState } from "./preview-state";
+import { logoutAction } from "@/app/actions";
 
 type Area = "team" | "committee";
 
-export function AppShell({ area, title, children }: { area: Area; title: string; children: React.ReactNode }) {
+export function AppShell({ area, title, userName, proposalUnlocked = false, children }: { area: Area; title: string; userName: string; proposalUnlocked?: boolean; children: React.ReactNode }) {
   const team = area === "team";
   const pathname = usePathname();
-  const { proposalUnlocked } = usePreviewState();
   const items = team
     ? [
         { href: "/team", label: "مشروعي", icon: House },
@@ -21,9 +20,9 @@ export function AppShell({ area, title, children }: { area: Area; title: string;
       ]
     : [
         { href: "/committee", label: "لوحة المتابعة", icon: Gauge },
-        { href: "/committee/reviews/FTC-26-018", label: "مراجعات المقترحات", icon: ClipboardCheck },
-        { href: "", label: "المشاريع (قريباً)", icon: Users, locked: true },
-        { href: "", label: "الإعدادات (قريباً)", icon: Settings, locked: true }
+        { href: "/committee", label: "مراجعات المقترحات", icon: ClipboardCheck },
+        { href: "/committee", label: "المشاريع", icon: Users },
+        { href: "", label: "الإعدادات", icon: Settings, locked: true }
       ];
 
   return (
@@ -41,16 +40,16 @@ export function AppShell({ area, title, children }: { area: Area; title: string;
           ))}
         </nav>
         <div className="sidebar-footer">
-          نسخة استعراضية محلية<br />لا يوجد محرك تقييم متصل
+          نسخة تشغيلية<br />التقييم الآلي غير متصل
         </div>
       </aside>
       <main className="main">
         <header className="topbar">
           <h1>{title}</h1>
           <div className="user-chip">
-            <span className="avatar">{team ? "ف" : "ل"}</span>
-            <span>{team ? "فريق تجريبي" : "قائد اللجنة"}</span>
-            <LogOut size={15} color="#78837c" />
+            <span className="avatar">{userName.trim().charAt(0) || (team ? "ف" : "ل")}</span>
+            <span>{userName}</span>
+            <form action={logoutAction}><button aria-label="تسجيل الخروج" className="logout-button" type="submit"><LogOut size={15} /></button></form>
           </div>
         </header>
         {children}

@@ -1,33 +1,37 @@
-# Masar web preview
+# Masar website
 
-Arabic RTL web application for the Future Technology Club project-management
-committee. This branch replaces the Google Sheets/Forms user experience with a
-self-hosted Next.js website.
+Arabic RTL production website for the Future Technology Club project-management committee.
 
-## Run locally
+## Included
+
+- Team and committee accounts with database-backed sessions
+- Project intake and size classification
+- Timeline storage and T1–T7 checks
+- Proposal upload gate and private file storage
+- Manual rubric review with criterion 6 deliberately disabled
+- Lead-only final feedback through an SMTP outbox
+- PostgreSQL migrations and Cranl-compatible start commands
+
+No model provider is connected. The website never guesses missing governance values.
+
+## Local setup
+
+Copy `.env.example` to `.env.local`, provide PostgreSQL and bootstrap-admin values, then run:
 
 ```bash
-cd web
 npm install
+npm run db:setup
 npm run dev
 ```
 
-Open <http://localhost:3000>. If that port is occupied, Next.js prints the
-available port it selected.
+SMTP is optional for browsing and manual review, but final delivery remains locked until all SMTP variables are configured.
 
-## Current preview scope
+## Verification
 
-- Team project intake and size classification
-- Timeline entry, unlimited preparatory activities, and T1–T7 results
-- Proposal upload gate and receipt wording
-- Committee dashboard and editable lead-review screen
-- Explicit model-off state; no Anthropic or other model endpoint is contacted
+From the repository root:
 
-All named projects, counts, excerpts, and scores shown in the interface are
-clearly marked demonstration data. They are not governance values or committee
-decisions.
-
-The preview currently keeps interactive changes in browser state. Persistent
-storage, authentication, email delivery, file storage, and the future
-self-hosted scoring adapter belong to the deployment phase and are not implied
-by this visual preview.
+```bash
+npm test
+npm run build
+node phase-2-review/test-harness/run.js
+```

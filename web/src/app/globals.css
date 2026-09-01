@@ -169,6 +169,37 @@ tr:hover td { background: #fbfaf5; }
 .divider { height: 1px; background: var(--line); margin: 18px 0; }
 .toast { position: fixed; left: 24px; bottom: 24px; background: var(--green-dark); color: white; padding: 14px 18px; border-radius: 13px; box-shadow: var(--shadow); z-index: 20; }
 .field-error { color: var(--red); font-size: 12px; margin: 7px 0; }
+.success-text { color: var(--green); font-size: 12px; }
+.logout-button { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 6px; display: grid; place-items: center; }
+.auth-page { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 28px; padding: 30px; }
+.auth-card { width: min(480px, 100%); }
+.auth-card h1 { margin: 0 0 6px; }
+.auth-card .form-section > p { margin-bottom: 24px; }
+.auth-actions { justify-content: space-between; }
+.empty-state { text-align: center; padding: 50px 24px; }
+.empty-state p { color: var(--muted); }
+.project-heading { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.project-heading strong { font-size: 19px; }
+.project-heading p { color: var(--muted); margin: 5px 0 0; font-size: 13px; }
+.project-list { display: grid; gap: 10px; }
+.project-list a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; }
+.project-list a:hover { background: #f5f4ee; }
+.section-inline { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.section-inline h3, .section-inline p { margin: 0; }
+.section-inline p { color: var(--muted); font-size: 13px; }
+.inline-form { display: flex; align-items: center; gap: 6px; min-width: 330px; }
+.inline-form select, .inline-form input { border: 1px solid var(--line); border-radius: 8px; padding: 7px; min-width: 90px; }
+.proposal-source { margin: 18px 0; }
+.proposal-text { white-space: pre-wrap; max-height: 360px; overflow: auto; line-height: 1.8; }
+.rubric-item .field textarea { min-height: 78px; }
+.checkbox-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.helper-text { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.project-evidence { margin-top: 10px; min-width: 280px; }
+.project-evidence summary { color: var(--green); cursor: pointer; font-weight: 600; }
+.project-evidence dl { display: grid; grid-template-columns: 80px 1fr; gap: 5px 10px; margin: 10px 0; }
+.project-evidence dt { color: var(--muted); }
+.project-evidence dd { margin: 0; }
+.compact-checks p { margin: 6px 0; color: var(--muted); line-height: 1.5; }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding-top: 40px; }
