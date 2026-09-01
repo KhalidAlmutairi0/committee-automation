@@ -17,7 +17,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {mode === "register" && <div className="field full"><label htmlFor="name">اسم الفريق أو المستخدم</label><input autoComplete="name" id="name" name="name" required /></div>}
         <div className="field full"><label htmlFor="email">البريد الإلكتروني</label><input autoComplete="email" id="email" name="email" required type="email" /></div>
         <div className="field full"><label htmlFor="password">كلمة المرور</label><input autoComplete={mode === "login" ? "current-password" : "new-password"} id="password" minLength={mode === "register" ? 12 : 1} name="password" required type="password" /></div>
-        {mode === "register" && <div className="field full"><label htmlFor="registrationCode">رمز تسجيل الفريق</label><input autoComplete="off" id="registrationCode" name="registrationCode" required type="password" /></div>}
       </div>
       {state.error && <div className="notice notice-warning" role="alert" style={{marginTop:16}}>{state.error}</div>}
     </div>

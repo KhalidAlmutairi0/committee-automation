@@ -24,8 +24,6 @@ function firstError(error: { issues: Array<{message:string}> }): string {
 export async function registerAction(_state: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = registerSchema.safeParse({ name: formData.get("name"), email: formData.get("email"), password: formData.get("password") });
   if (!parsed.success) return { error: firstError(parsed.error) };
-  const registrationCode = process.env.TEAM_REGISTRATION_CODE;
-  if (!registrationCode || String(formData.get("registrationCode") || "") !== registrationCode) return { error: "رمز تسجيل الفريق غير صحيح أو التسجيل مغلق." };
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   let userId: string;
   try {
